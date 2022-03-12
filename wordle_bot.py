@@ -115,24 +115,24 @@ def run():
                 if word in candidates:
                     wc_match.append(word)
             if len(wc_match) > 0:
-                guess = get_min_freq(wc_match)
+                guess = get_max_freq(wc_match)
 
         print("Guess:", guess)
 
     print("Game End")
 
 
-def get_min_freq(words):
+def get_max_freq(words):
     if len(words) == 1:
         return words[0]
-    min_word = words[0]
-    min_score = get_frequency_score(min_word)
+    max_word = words[0]
+    max_score = get_frequency_score(max_word)
     for word in words:
         score = get_frequency_score(word)
-        if min_score == -1 or score < min_score and score != -1:
-            min_score = score
-            min_word = word
-    return min_word
+        if max_score == -1 or score > max_score and score != -1:
+            max_score = score
+            max_word = word
+    return max_word
 
 def getTops(num, words):
     if len(words) <= num:
@@ -306,11 +306,10 @@ def get_frequency_score(word):
     try:
         contents = urllib.request.urlopen("https://api.datamuse.com/words?sp=" + word + "&md=f&max=1").read()
         dec_con = json.loads(contents)
-        score = dec_con[0]["score"]
+        score = float(dec_con[0]['tags'][0][2:])
     except:
         return -1
     return score
-
 
 
 if __name__ == "__main__":

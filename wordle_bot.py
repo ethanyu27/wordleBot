@@ -1,28 +1,12 @@
-import random
-import urllib.request
 import itertools
 import heapq
-import random
 import argparse
-import json
 import heapq
+import copy
 from operator import itemgetter
 
 
-def run():
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--size", help="Search size for candidate selection")
-    parser.add_argument("-f", "--first", help="First guess word")
-    args = parser.parse_args()
-
-    search_size = 10
-    if args.size and args.size.isdigit():
-        search_size = int(args.size)
-
-    first = "f"
-    if args.first:
-        first = args.first
+def run(first, test, search_size):
 
     print("Scoring: 0 = Black, 1 = Yellow, 2 = Green")
     print("Sample result format: \"00121\"")
@@ -48,11 +32,19 @@ def run():
     yellow_list = {}
     no_letter = []
 
+    guess = ""
+    success = False
+    guesses = 0
     for i in range(6):
         if i != 0:
-            result = input("Enter result: ")
+            result = ""
+            if len(test) == 5:
+                result = list_to_str(check_guess(guess, test))
+                print("Enter result:", result)
+            else:
+                result = input("Enter result: ")
             if result == "22222":
-                print("success!")
+                success = True
                 break
             result_list = str_to_list(result)
             guess_arr = str_to_list(guess)
@@ -73,8 +65,8 @@ def run():
             guess = first
         else:
             adj_size = search_size * (len(green_list) + 1)
-            top_master = getTopsHQ(adj_size, master_list)
-            top_words = getTopsHQ(adj_size, words)
+            top_master = getTops(adj_size, master_list)
+            top_words = getTops(adj_size, words)
 
             for word in top_master:
                 if word not in top_words:
@@ -90,7 +82,7 @@ def run():
 
                         words_cpy = words.copy()
                         green_cpy = green_list.copy()
-                        yellow_cpy = copy_r(yellow_list)
+                        yellow_cpy = copy.deepcopy(yellow_list)
                         noL_cpy = no_letter.copy()
                         set_cpy = set_letters.copy()
                         guess_res = check_guess(guess_sim, sol_sim)
@@ -117,10 +109,23 @@ def run():
             if len(wc_match) > 0:
                 guess = get_max_freq(wc_match)
 
+        remaining = len(words)
         print("Guess:", guess)
+        guesses += 1
+    if not success:
+        result = ""
+        if len(test) == 5:
+            result = list_to_str(check_guess(guess, test))
+            print("Final Result:", result)
+        else:
+            result = input("Final Result: ")
+        if result == "22222":
+            success = True
 
-    print("Game End")
+    end_msg = "Success in " + str(guesses) + " guesses" if success else "Unsuccessful"
+    print("Game End:", end_msg)
 
+    return guesses if success else None
 
 def get_max_freq(words):
     if len(words) == 1:
@@ -137,29 +142,9 @@ def get_max_freq(words):
 def getTops(num, words):
     if len(words) <= num:
         return list(words.keys())
-    top = []
-    for i in range(num):
-        selection = ""
-        score = 0
-        for word in words:
-            if word not in top and words[word] > score:
-                score = words[word]
-                selection = word
-        top.append(selection)
-    return top
-
-def getTopsHQ(num, words):
-    if len(words) <= num:
-        return list(words.keys())
     top = heapq.nlargest(num, words.items(), key=itemgetter(1))
     top_list = list(dict(top).keys())
     return top_list
-
-def copy_r(orig):
-    new_list = orig.copy()
-    for item in orig:
-        new_list[item] = orig[item].copy()
-    return new_list
 
 def check_guess(guess, solution):
     result = ['1', '1', '1', '1', '1']
@@ -244,14 +229,11 @@ def check_green_list(green_list, word):
     return True
 
 def check_no_letter(no_letter, word):
-    for letter in word:
-        if letter in no_letter:
-            return False
-    return True
+    return not any(letter in no_letter for letter in word)
 
 def get_max(words, master):
     max_score = 0
-    max_word = ""
+    max_word = words[0]
     for word in words:
         score = master[word]
         if score > max_score:
@@ -260,8 +242,7 @@ def get_max(words, master):
     return max_word
 
 def reset_scores(words):
-    for word in words:
-        words[word] = 0
+    words = {word: 0 for word in words}
     return words
 
 def update_scores(words, letter_counts, used):
@@ -282,35 +263,46 @@ def letter_count(word_list):
             alphabet[letter] += 1
     return alphabet
 
-def str_to_list(str):
-    list = []
-    for char in str:
-        list.append(char)
-    return list
+def str_to_list(strg):
+    return [c for c in strg]
 
-def list_to_str(list):
-    str = ""
-    for char in list:
-        str += char
-    return str
+def list_to_str(lst):
+    strg = ""
+    for char in lst:
+        strg += char
+    return strg
 
-def check_word(word):
-    try:
-        contents = urllib.request.urlopen("https://api.dictionaryapi.dev/api/v2/entries/en/" + word).read()
-    except:
-        return False
-    return True
-
+"""
+Word Frequencies are found and imported using the Datamuse API:
+https://api.datamuse.com/words?sp=<word>&md=f&max=1
+All relevant words were entered into word_frequencies.txt
+"""
 def get_frequency_score(word):
-    score = -1
-    try:
-        contents = urllib.request.urlopen("https://api.datamuse.com/words?sp=" + word + "&md=f&max=1").read()
-        dec_con = json.loads(contents)
-        score = float(dec_con[0]['tags'][0][2:])
-    except:
-        return -1
-    return score
-
+    with open("word_frequencies.txt", "r") as frq_file:
+        for line in frq_file:
+            w, frequency = line.replace("\n", "").split(" ")
+            if w == word:
+                return float(frequency)
+    return -1
 
 if __name__ == "__main__":
-    run()
+        
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--size", help="Search size for candidate selection")
+    parser.add_argument("-f", "--first", help="First guess word")
+    parser.add_argument("-t", "--test", help="test input on given word")
+    args = parser.parse_args()
+
+    search_size = 10
+    if args.size and args.size.isdigit():
+        search_size = int(args.size)
+
+    first = "f"
+    if args.first:
+        first = args.first
+    
+    test = "t"
+    if args.test:
+        test = args.test
+    
+    run(first, test, search_size)

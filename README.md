@@ -10,7 +10,7 @@ Simple search algorithm to solve the 5-letter wordle puzzle
 - "-s": specifies the proportional size of the initial candidate selection list (default = 10)
 - "-f": specifies a seed word to select as the first guess
   - This is done to reduce runtime or account for a more optimally found seed word
-  - The current algorithm will find "raise" as its optimal first word. Thus, "-f raise" will decrease search latency for the first guess
+  - With default parameters, the algorithm will find "raise" as its first word. Thus, "-f raise" will decrease search latency for the first guess
 - "-t": specifies a solution word to test the wordle bot's performance automatically. Score will be given automatically and no other user input is needed
 
 ## Performance
